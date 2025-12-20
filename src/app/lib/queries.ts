@@ -15,16 +15,27 @@ import {
   sql,
 } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
-import { db } from "@/db";
+import { db, isDatabaseAvailable } from "@/db";
 import { tasks } from "@/db/schema";
 
 import { filterColumns } from "@/lib/filter-columns";
+import {
+  getEstimatedHoursRangeMock,
+  getTaskPriorityCountsMock,
+  getTaskStatusCountsMock,
+  getTasksMock,
+} from "@/db/mock-queries";
 
 import type { GetTasksSchema } from "./validations";
 
 export async function getTasks(input: GetTasksSchema) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
+
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return getTasksMock(input);
+  }
 
   try {
     const offset = (input.page - 1) * input.perPage;
@@ -126,6 +137,11 @@ export async function getTaskStatusCounts() {
   cacheLife("hours");
   cacheTag("task-status-counts");
 
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return getTaskStatusCountsMock();
+  }
+
   try {
     return await db
       .select({
@@ -163,6 +179,11 @@ export async function getTaskPriorityCounts() {
   cacheLife("hours");
   cacheTag("task-priority-counts");
 
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return getTaskPriorityCountsMock();
+  }
+
   try {
     return await db
       .select({
@@ -197,6 +218,11 @@ export async function getTaskPriorityCounts() {
 export async function getEstimatedHoursRange() {
   cacheLife("hours");
   cacheTag("estimated-hours-range");
+
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return getEstimatedHoursRangeMock();
+  }
 
   try {
     return await db

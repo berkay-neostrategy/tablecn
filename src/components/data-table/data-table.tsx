@@ -10,6 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableItemHandle,
+} from "@/components/ui/sortable";
+import { GripVertical } from "lucide-react";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
@@ -35,24 +42,46 @@ export function DataTable<TData>({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    style={{
-                      ...getCommonPinningStyles({ column: header.column }),
-                    }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
+              <Sortable
+                key={headerGroup.id}
+                value={headerGroup.headers.map((h) => h.id)}
+                onValueChange={(order) => {
+                  const newOrder = order.map((id) => id.toString());
+                  table.setColumnOrder(newOrder);
+                }}
+                orientation="horizontal"
+              >
+                <SortableContent asChild>
+                  <TableRow>
+                    {headerGroup.headers.map((header) => (
+                      <SortableItem
+                        key={header.id}
+                        value={header.id}
+                        asChild
+                      >
+                        <TableHead
+                          colSpan={header.colSpan}
+                          style={{
+                            ...getCommonPinningStyles({ column: header.column }),
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                             <SortableItemHandle className="cursor-grab hover:bg-muted p-1 rounded transition-colors">
+                               <GripVertical className="h-4 w-4 text-muted-foreground/50" aria-hidden="true" />
+                             </SortableItemHandle>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
+                          </div>
+                        </TableHead>
+                      </SortableItem>
+                    ))}
+                  </TableRow>
+                </SortableContent>
+              </Sortable>
             ))}
           </TableHeader>
           <TableBody>

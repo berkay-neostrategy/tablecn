@@ -3,16 +3,29 @@
 import { asc, eq, inArray, not } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
 import { updateTag } from "next/cache";
-import { db } from "@/db/index";
+import { db, isDatabaseAvailable } from "@/db/index";
 import { type Task, tasks } from "@/db/schema";
 import { takeFirstOrThrow } from "@/db/utils";
 
 import { getErrorMessage } from "@/lib/handle-error";
+import {
+  createTaskMock,
+  deleteTaskMock,
+  deleteTasksMock,
+  seedTasksMock,
+  updateTaskMock,
+  updateTasksMock,
+} from "@/db/mock-actions";
 
 import { generateRandomTask } from "./utils";
 import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
 
 export async function seedTasks(input: { count: number }) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return seedTasksMock(input);
+  }
+
   const count = input.count ?? 100;
 
   try {
@@ -33,6 +46,11 @@ export async function seedTasks(input: { count: number }) {
 }
 
 export async function createTask(input: CreateTaskSchema) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return createTaskMock(input);
+  }
+
   try {
     await db.transaction(async (tx) => {
       const newTask = await tx
@@ -85,6 +103,11 @@ export async function createTask(input: CreateTaskSchema) {
 }
 
 export async function updateTask(input: UpdateTaskSchema & { id: string }) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return updateTaskMock(input);
+  }
+
   try {
     const data = await db
       .update(tasks)
@@ -127,6 +150,11 @@ export async function updateTasks(input: {
   status?: Task["status"];
   priority?: Task["priority"];
 }) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return updateTasksMock(input);
+  }
+
   try {
     const data = await db
       .update(tasks)
@@ -163,6 +191,11 @@ export async function updateTasks(input: {
 }
 
 export async function deleteTask(input: { id: string }) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return deleteTaskMock(input);
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx.delete(tasks).where(eq(tasks.id, input.id));
@@ -188,6 +221,11 @@ export async function deleteTask(input: { id: string }) {
 }
 
 export async function deleteTasks(input: { ids: string[] }) {
+  // Mock data kullan
+  if (!isDatabaseAvailable || !db) {
+    return deleteTasksMock(input);
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx.delete(tasks).where(inArray(tasks.id, input.ids));

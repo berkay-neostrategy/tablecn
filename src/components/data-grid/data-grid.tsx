@@ -1,10 +1,18 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import {
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableItemHandle,
+} from "@/components/ui/sortable";
+import { GripVertical } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
+import { DataGridVisualizerDialog } from "@/components/data-grid/data-grid-visualizer-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -50,6 +58,7 @@ export function DataGrid<TData>({
   rowHeight,
   contextMenu,
   pasteDialog,
+  visualizer,
   onRowAdd,
   height = 600,
   stretchColumns = false,
@@ -59,6 +68,7 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
+  const columnOrder = table.getState().columnOrder;
   const columnPinning = table.getState().columnPinning;
 
   const onDataGridContextMenu = React.useCallback(
@@ -94,6 +104,9 @@ export function DataGrid<TData>({
         contextMenu={contextMenu}
       />
       <DataGridPasteDialog tableMeta={tableMeta} pasteDialog={pasteDialog} />
+      {visualizer && (
+        <DataGridVisualizerDialog tableMeta={tableMeta} visualizerState={visualizer} />
+      )}
       <div
         role="grid"
         aria-label="Data grid"
@@ -116,61 +129,87 @@ export function DataGrid<TData>({
           className="sticky top-0 z-10 grid border-b bg-background"
         >
           {table.getHeaderGroups().map((headerGroup, rowIndex) => (
-            <div
+            <Sortable
               key={headerGroup.id}
-              role="row"
-              aria-rowindex={rowIndex + 1}
-              data-slot="grid-header-row"
-              tabIndex={-1}
-              className="flex w-full"
+              value={headerGroup.headers.map((h) => h.id)}
+              onValueChange={(order) => {
+                const newOrder = order.map((id) => id.toString());
+                table.setColumnOrder(newOrder);
+              }}
+              orientation="horizontal"
             >
-              {headerGroup.headers.map((header, colIndex) => {
-                const sorting = table.getState().sorting;
-                const currentSort = sorting.find(
-                  (sort) => sort.id === header.column.id,
-                );
-                const isSortable = header.column.getCanSort();
+              <SortableContent asChild withoutSlot>
+                <div
+                  key={headerGroup.id}
+                  role="row"
+                  aria-rowindex={rowIndex + 1}
+                  data-slot="grid-header-row"
+                  tabIndex={-1}
+                  className="flex w-full"
+                >
+                  {headerGroup.headers.map((header, colIndex) => {
+                    const sorting = table.getState().sorting;
+                    const currentSort = sorting.find(
+                      (sort) => sort.id === header.column.id,
+                    );
+                    const isSortable = header.column.getCanSort();
 
-                return (
-                  <div
-                    key={header.id}
-                    role="columnheader"
-                    aria-colindex={colIndex + 1}
-                    aria-sort={
-                      currentSort?.desc === false
-                        ? "ascending"
-                        : currentSort?.desc === true
-                          ? "descending"
-                          : isSortable
-                            ? "none"
-                            : undefined
-                    }
-                    data-slot="grid-header-cell"
-                    tabIndex={-1}
-                    className={cn("relative", {
-                      grow: stretchColumns && header.column.id !== "select",
-                      "border-e": header.column.id !== "select",
-                    })}
-                    style={{
-                      ...getCommonPinningStyles({ column: header.column, dir }),
-                      width: `calc(var(--header-${header.id}-size) * 1px)`,
-                    }}
-                  >
-                    {header.isPlaceholder ? null : typeof header.column
-                        .columnDef.header === "function" ? (
-                      <div className="size-full px-3 py-1.5">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </div>
-                    ) : (
-                      <DataGridColumnHeader header={header} table={table} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <SortableItem
+                        key={header.id}
+                        value={header.id}
+                        asChild
+                      >
+                        <div
+                          key={header.id}
+                          role="columnheader"
+                          aria-colindex={colIndex + 1}
+                          aria-sort={
+                            currentSort?.desc === false
+                              ? "ascending"
+                              : currentSort?.desc === true
+                                ? "descending"
+                                : isSortable
+                                  ? "none"
+                                  : undefined
+                          }
+                          data-slot="grid-header-cell"
+                          tabIndex={-1}
+                          className={cn("relative flex items-center gap-1", {
+                            grow: stretchColumns && header.column.id !== "select",
+                            "border-e": header.column.id !== "select",
+                          })}
+                          style={{
+                            ...getCommonPinningStyles({
+                              column: header.column,
+                              dir,
+                            }),
+                            width: `calc(var(--header-${header.id}-size) * 1px)`,
+                          }}
+                        >
+                            {!header.column.getIsPinned() && header.id !== "select" && header.id !== "actions" && (
+                             <SortableItemHandle className="ml-1 cursor-grab hover:bg-muted p-0.5 rounded transition-colors shrink-0">
+                               <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
+                             </SortableItemHandle>
+                            )}
+                          {header.isPlaceholder ? null : typeof header.column
+                              .columnDef.header === "function" ? (
+                            <div className="flex-1 px-3 py-1.5 overflow-hidden">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </div>
+                          ) : (
+                            <DataGridColumnHeader header={header} table={table} />
+                          )}
+                        </div>
+                      </SortableItem>
+                    );
+                  })}
+                </div>
+              </SortableContent>
+            </Sortable>
           ))}
         </div>
         <div
@@ -205,6 +244,7 @@ export function DataGrid<TData>({
                 measureElement={measureElement}
                 rowHeight={rowHeight}
                 columnVisibility={columnVisibility}
+                columnOrder={columnOrder}
                 columnPinning={columnPinning}
                 focusedCell={focusedCell}
                 editingCell={editingCell}

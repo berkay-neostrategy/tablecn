@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef, TableMeta } from "@tanstack/react-table";
-import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
+import { BarChart3Icon, CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,8 @@ export function DataGridContextMenu<TData>({
   const onRowsDelete = tableMeta?.onRowsDelete;
   const onCellsCopy = tableMeta?.onCellsCopy;
   const onCellsCut = tableMeta?.onCellsCut;
+  const onVisualize = tableMeta?.onVisualize;
+  const visualizerState = tableMeta?.visualizer;
 
   if (!contextMenu.open) return null;
 
@@ -47,6 +49,8 @@ export function DataGridContextMenu<TData>({
       onRowsDelete={onRowsDelete}
       onCellsCopy={onCellsCopy}
       onCellsCut={onCellsCut}
+      onVisualize={onVisualize}
+      visualizerState={visualizerState}
     />
   );
 }
@@ -61,6 +65,9 @@ interface ContextMenuProps<TData>
       | "onRowsDelete"
       | "onCellsCopy"
       | "onCellsCut"
+      | "onCellsCut"
+      | "onVisualize"
+      | "visualizer"
       | "readOnly"
     >,
     Required<Pick<TableMeta<TData>, "contextMenu">> {
@@ -92,7 +99,9 @@ function ContextMenuImpl<TData>({
   onRowsDelete,
   onCellsCopy,
   onCellsCut,
-}: ContextMenuProps<TData>) {
+  onVisualize,
+  visualizerState,
+}: ContextMenuProps<TData> & { visualizerState?: any }) {
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
       position: "fixed",
@@ -207,6 +216,13 @@ function ContextMenuImpl<TData>({
         <DropdownMenuItem onSelect={onCut} disabled={tableMeta?.readOnly}>
           <ScissorsIcon />
           Cut
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onSelect={() => onVisualize?.()} 
+          disabled={!selectionState?.selectedCells || selectionState.selectedCells.size === 0}
+        >
+          <BarChart3Icon />
+          Visualize Selection
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onClear} disabled={tableMeta?.readOnly}>
           <EraserIcon />

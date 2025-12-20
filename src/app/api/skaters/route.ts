@@ -6,12 +6,19 @@ import {
   insertSkatersSchema,
   updateSkatersSchema,
 } from "@/app/data-grid-live/lib/validation";
-import { db } from "@/db";
+import { db, isDatabaseAvailable } from "@/db";
 import { type Skater, skaters } from "@/db/schema";
+import { mockDataStore } from "@/db/mock-data";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET() {
   try {
+    // Mock data kullan
+    if (!isDatabaseAvailable || !db) {
+      const allSkaters = mockDataStore.getSkaters();
+      return NextResponse.json(allSkaters);
+    }
+
     const allSkaters = await db.select().from(skaters);
     return NextResponse.json(allSkaters);
   } catch (error) {
@@ -34,6 +41,34 @@ export async function POST(request: Request) {
 
   try {
     const body: unknown = await request.json();
+
+    // Mock data kullan
+    if (!isDatabaseAvailable || !db) {
+      // Try bulk insert first
+      const bulkResult = insertSkatersSchema.safeParse(body);
+      if (bulkResult.success) {
+        const newSkaters = mockDataStore.createSkaters(bulkResult.data.skaters);
+        return NextResponse.json({
+          inserted: newSkaters.length,
+          skaters: newSkaters,
+        });
+      }
+
+      // Try single insert
+      const singleResult = insertSkaterSchema.safeParse(body);
+      if (!singleResult.success) {
+        return NextResponse.json(
+          {
+            error: "Invalid request body",
+            details: singleResult.error.flatten(),
+          },
+          { status: 400 },
+        );
+      }
+
+      const newSkater = mockDataStore.createSkater(singleResult.data);
+      return NextResponse.json(newSkater);
+    }
 
     // Try bulk insert first
     const bulkResult = insertSkatersSchema.safeParse(body);
@@ -104,6 +139,12 @@ export async function PATCH(request: Request) {
         { error: "updates array is empty" },
         { status: 400 },
       );
+    }
+
+    // Mock data kullan
+    if (!isDatabaseAvailable || !db) {
+      const updated = mockDataStore.updateSkaters(updates);
+      return NextResponse.json({ updated: updated.length });
     }
 
     // Single update - just update directly
@@ -178,6 +219,12 @@ export async function DELETE(request: Request) {
         { error: "Invalid request body", details: result.error.flatten() },
         { status: 400 },
       );
+    }
+
+    // Mock data kullan
+    if (!isDatabaseAvailable || !db) {
+      const deletedCount = mockDataStore.deleteSkaters(result.data.ids);
+      return NextResponse.json({ deleted: deletedCount });
     }
 
     const deletedSkaters = await db

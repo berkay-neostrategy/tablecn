@@ -130,6 +130,9 @@ declare module "@tanstack/react-table" {
     onPasteDialogOpenChange?: (open: boolean) => void;
     onPasteWithExpansion?: () => void;
     onPasteWithoutExpansion?: () => void;
+    visualizer?: VisualizerState;
+    onVisualizerOpenChange?: (open: boolean) => void;
+    onVisualize?: () => void;
   }
 }
 
@@ -160,6 +163,13 @@ export interface PasteDialogState {
   rowsNeeded: number;
   clipboardText: string;
 }
+
+export interface VisualizerState {
+  open: boolean;
+  data: any[];
+}
+
+export type ChartType = "bar" | "line" | "area";
 
 export type NavigationDirection =
   | "up"

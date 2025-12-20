@@ -8,7 +8,7 @@ export default {
   dialect: "postgresql",
   out: "./drizzle",
   dbCredentials: {
-    url: env.DATABASE_URL,
+    url: env.DATABASE_URL ?? "postgresql://localhost:5432/dummy",
   },
   tablesFilter: [`${DATABASE_PREFIX}_*`],
 } satisfies Config;
